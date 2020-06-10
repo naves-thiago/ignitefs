@@ -14,48 +14,12 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="btnTop">
-    <property name="geometry">
-     <rect>
-      <x>450</x>
-      <y>250</y>
-      <width>80</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Top</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="edit">
-    <property name="geometry">
-     <rect>
-      <x>450</x>
-      <y>220</y>
-      <width>113</width>
-      <height>22</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label">
-    <property name="geometry">
-     <rect>
-      <x>580</x>
-      <y>220</y>
-      <width>56</width>
-      <height>14</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>TextLabel</string>
-    </property>
-   </widget>
    <widget class="QTreeWidget" name="fileTree">
     <property name="geometry">
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>256</width>
+      <width>291</width>
       <height>551</height>
      </rect>
     </property>
@@ -65,28 +29,90 @@
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
+    <attribute name="headerShowSortIndicator" stdset="0">
+     <bool>false</bool>
+    </attribute>
     <column>
      <property name="text">
-      <string>Nome</string>
+      <string>Name</string>
      </property>
     </column>
     <column>
      <property name="text">
-      <string>Tamanho</string>
+      <string>Size</string>
      </property>
     </column>
    </widget>
-   <widget class="QPushButton" name="btnChild">
+   <widget class="QPlainTextEdit" name="fileContents">
     <property name="geometry">
      <rect>
-      <x>450</x>
-      <y>280</y>
+      <x>300</x>
+      <y>30</y>
+      <width>491</width>
+      <height>461</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>300</x>
+      <y>10</y>
+      <width>131</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>File contents</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="fileName">
+    <property name="geometry">
+     <rect>
+      <x>300</x>
+      <y>520</y>
+      <width>211</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>300</x>
+      <y>500</y>
+      <width>61</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>File name</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="newFile">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>520</y>
+      <width>81</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>New file</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="saveFile">
+    <property name="geometry">
+     <rect>
+      <x>610</x>
+      <y>520</y>
       <width>80</width>
       <height>22</height>
      </rect>
     </property>
     <property name="text">
-     <string>Child</string>
+     <string>Save</string>
     </property>
    </widget>
   </widget>

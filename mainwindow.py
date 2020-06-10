@@ -46,12 +46,12 @@ class MainWindow:
         self.window = uic.loadUi("mainwindow.ui")
         self.fileTree = self.window.fileTree
         self.fileTree.itemExpanded.connect(self.fileTreeItemExpanded)
-        self.btnTop = self.window.btnTop
-        self.btnTop.clicked.connect(self.btnTopClick)
-        self.btnChild = self.window.btnChild
-        self.btnChild.clicked.connect(self.btnChildClick)
-        self.edit = self.window.edit
-        self.label = self.window.label
+        self.btnSaveFile = self.window.saveFile
+        self.btnSaveFile.clicked.connect(self.saveFileClick)
+        self.btnNewFile = self.window.newFile
+        self.btnNewFile.clicked.connect(self.newFileClick)
+        self.edtFileName = self.window.fileName
+        self.edtFileContents = self.window.fileContents
 
         self.loaded = {} # Lists loaded directories and files
         self.db = db
@@ -66,14 +66,11 @@ class MainWindow:
     def show(self):
         self.window.show()
 
-    def btnTopClick(self):
-        self.addTopEntry(self.edit.text(), 123, True)
+    def newFileClick(self):
+        pass
 
-    def btnChildClick(self):
-        sel = self.fileTree.currentItem()
-        if sel:
-            item = QtWidgets.QTreeWidgetItem(sel, [self.edit.text(), "bar"], 2)
-            sel.addChild(item)
+    def saveFileClick(self):
+        pass
 
     def fileTreeItemExpanded(self, item):
         item.takeChildren()
@@ -113,6 +110,9 @@ class MainWindow:
         item = self._createEntry(parent, name, size, directory)
         parent.addChild(item)
 
+    def addSubEntryToSelected(self, name, size, directory):
+        sel = self.fileTree.currentItem()
+        self.addSubEntry(self, name, size, directory)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
