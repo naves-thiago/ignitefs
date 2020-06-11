@@ -15,12 +15,14 @@ class DBDirectory(DBEntry):
 
 # DB mock
 data = {}
-data['/'] = DBDirectory('/', ['a', 'b'])
-data['/a'] = DBDirectory('a', ['c', 'd'])
+data['/'] = DBDirectory('/', ['a', 'b', 'c'])
+data['/a'] = DBDirectory('a', ['c', 'd', 'f'])
 data['/a/c'] = DBDirectory('c', ['e'])
 data['/a/c/e'] = DBEntry('e', 42)
 data['/a/d'] = DBEntry('d', '8')
 data['/b'] = DBEntry('b', '1333')
+data['/c'] = DBDirectory('c', [])
+data['/a/f'] = DBDirectory('f', [])
 
 class DB:
     def __init__(self):
@@ -41,6 +43,13 @@ class DB:
         print("Read %s" % (path))
         return "Contents of %s" % (data[path].name)
 
+    def saveFile(self, path, contents):
+        pass
+
+    def createFile(self, path, contents):
+        self.saveFile(path, contents)
+        # add to directory
+
 class MainWindow:
     def __init__(self, db):
         self.window = uic.loadUi("mainwindow.ui")
@@ -56,6 +65,9 @@ class MainWindow:
         self.loaded = {} # Lists loaded directories and files
         self.db = db
         entries = self.db.listDirectory('/')
+        if len(entries) == 0:
+            self.addSubEntry(item, '<empty>', '', False)
+
         for name in entries:
             e = self.db.getMetadata('/' + name)
             if e.directory:
@@ -76,10 +88,13 @@ class MainWindow:
         item.takeChildren()
         itemPath = self._entryPath(item)
         entries = self.db.listDirectory(itemPath)
+        if len(entries) == 0:
+            self.addSubEntry(item, '<empty>', '', False)
+
         for name in entries:
             e = self.db.getMetadata(itemPath + '/' + name)
             if e.directory:
-                self.addSubEntry(item, name, 0, True)
+                self.addSubEntry(item, name, '', True)
             else:
                 self.addSubEntry(item, name, e.size, False)
 
