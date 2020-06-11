@@ -71,3 +71,8 @@ Thumbs.db
 *.dll
 *.exe
 
+# Virtual Env
+# -----------
+bin/*
+lib/*
+pyvenv.cfg
