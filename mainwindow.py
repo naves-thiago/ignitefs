@@ -54,11 +54,11 @@ class MainWindow:
         self.fileTree = self.window.fileTree
         self.fileTree.itemExpanded.connect(self.fileTreeItemExpanded)
         self.btnSaveFile = self.window.saveFile
-        self.btnSaveFile.clicked.connect(self.saveFileClick)
+        self.btnSaveFile.clicked.connect(self._saveFileClick)
         self.btnNewFile = self.window.newFile
-        self.btnNewFile.clicked.connect(self.newFileClick)
-        self.edtFileName = self.window.fileName
-        self.edtFileContents = self.window.fileContents
+        self.btnNewFile.clicked.connect(self._newFileClick)
+        self.btnNewDirectory = self.window.newDirectory
+        self.btnNewDirectory.clicked.connect(self._newDirectoryClick)
 
         self.loaded = {} # Lists loaded directories and files
         self.db = db
@@ -76,10 +76,13 @@ class MainWindow:
     def show(self):
         self.window.show()
 
-    def newFileClick(self):
+    def _newFileClick(self):
         pass
 
-    def saveFileClick(self):
+    def _saveFileClick(self):
+        pass
+
+    def _newDirectoryClick(self):
         pass
 
     def fileTreeItemExpanded(self, item):
