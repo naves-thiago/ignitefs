@@ -3,26 +3,24 @@ import sys
 from PyQt5 import QtWidgets, uic
 
 class DBEntry:
-    def __init__(self, name, size, directory = False):
-        self.name      = name
-        self.size      = size
-        self.directory = directory
-
-class DBDirectory(DBEntry):
-    def __init__(self, name, contents):
-        super().__init__(name, 0, True)
-        self.contents = contents
+    def __init__(self, data):
+        self.directory = data['directory']
+        self.name      = data['name']
+        if self.directory:
+            self.contents = data['contents']
+        else:
+            self.size = data['size']
 
 # DB mock
 data = {}
-data['/'] = DBDirectory('/', ['a', 'b', 'c'])
-data['/a'] = DBDirectory('a', ['c', 'd', 'f'])
-data['/a/c'] = DBDirectory('c', ['e'])
-data['/a/c/e'] = DBEntry('e', 42)
-data['/a/d'] = DBEntry('d', '8')
-data['/b'] = DBEntry('b', '1333')
-data['/c'] = DBDirectory('c', [])
-data['/a/f'] = DBDirectory('f', [])
+data['/'] = {'name': '/', 'contents': ['a', 'b', 'c'], 'directory': True}
+data['/a'] = {'name': 'a', 'contents': ['c', 'd', 'f'], 'directory': True}
+data['/a/c'] = {'name': 'c', 'contents': ['e'], 'directory': True}
+data['/a/c/e'] = {'name': 'e', 'size': 42, 'directory': False}
+data['/a/d'] = {'name': 'd', 'size': 8, 'directory': False}
+data['/b'] = {'name': 'b', 'size': 1333, 'directory': False}
+data['/c'] = {'name': 'c', 'contents': [], 'directory': True}
+data['/a/f'] = {'name': 'f', 'contents': [], 'directory': True}
 
 class DB:
     def __init__(self):
@@ -32,16 +30,16 @@ class DB:
     def listDirectory(self, path):
         # MOCK
         print("List %s" % (path))
-        return data[path].contents
+        return data[path]['contents']
 
     def getMetadata(self, path):
         # MOCK
-        return data[path]
+        return DBEntry(data[path])
 
     def getFileContents(self, path):
         # MOCK (will load from a different cache)
         print("Read %s" % (path))
-        return "Contents of %s" % (data[path].name)
+        return "Contents of %s" % (data[path]['name'])
 
     def saveFile(self, path, contents):
         pass
