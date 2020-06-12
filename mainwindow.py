@@ -130,6 +130,10 @@ class MainWindow:
         sel = self.fileTree.currentItem()
         self.addSubEntry(self, name, size, directory)
 
+def nameDialog():
+    dialog = uic.loadUi("name_dialog.ui")
+    return dialog.exec() == 1, dialog.name.text()
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     db = DB()
