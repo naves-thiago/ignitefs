@@ -70,16 +70,7 @@ class MainWindow:
 
         self.loaded = {} # Lists loaded directories and files
         self.db = db
-        entries = self.db.listDirectory('/')
-        if len(entries) == 0:
-            self.addSubEntry(item, '<empty>', '', False)
-
-        for name in entries:
-            e = self.db.getMetadata('/' + name)
-            if e.directory:
-                self.addTopEntry(name, '', True)
-            else:
-                self.addTopEntry(name, e.size, False)
+        self.rootItem = self.addTopEntry('/', '', True)
 
     def show(self):
         self.window.show()
@@ -89,7 +80,7 @@ class MainWindow:
         or its parent otherwise '''
         selected = self.selectedItem()
         if not selected:
-            return None
+            return self.rootItem
 
         if selected.childCount() > 0:
             return selected
@@ -99,11 +90,7 @@ class MainWindow:
     def _currentDirPath(self):
         ''' Returns the path to the current directory. If the selected item is not
         a directory, returns its parent's path '''
-        cdir = self._currentDirItem()
-        if not cdir:
-            return '/'
-
-        return self._entryPath(cdir)
+        return self._entryPath(self._currentDirItem())
 
     def _newFileClick(self):
         ok, name = nameDialog()
@@ -117,11 +104,9 @@ class MainWindow:
 
         currentDir = self._currentDirPath()
         if currentDir == '/':
-            self.db.createFile(currentDir + name, '')
-            item = self.addTopEntry(name, 0, False)
+            self.db.createFile('/' + name, '')
         else:
             self.db.createFile(currentDir + '/' + name, '')
-            item = self.addSubEntry(self._currentDirItem(), name, 0, False)
 
         # TODO check if current file was not saved
         parent = self._currentDirItem()
@@ -154,6 +139,9 @@ class MainWindow:
         item.takeChildren()
         itemPath = self._entryPath(item)
         entries = self.db.listDirectory(itemPath)
+        if itemPath == '/':
+            itemPath = ''
+
         if len(entries) == 0:
             self.addSubEntry(item, '<empty>', '', False)
 
@@ -165,9 +153,12 @@ class MainWindow:
                 self.addSubEntry(item, name, e.size, False)
 
     def _entryPath(self, item):
+        if item == self.rootItem:
+            return '/'
+
         path = "/" + item.text(0)
         parent = item.parent()
-        while parent:
+        while parent != self.rootItem:
             path = "/" + parent.text(0) + path
             parent = parent.parent()
         return path
