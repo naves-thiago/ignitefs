@@ -47,18 +47,26 @@ class DB:
     def createFile(self, path, contents):
         self.saveFile(path, contents)
         # add to directory
+        # MOCK
+        bar = path.rfind('/')
+        directory = path[:bar]
+        if directory == '':
+            directory = '/'
+        name = path[bar+1:]
+        data[directory]['contents'].append(name)
+        data[path] = {'name': name, 'size': 0, 'directory': False}
+
 
 class MainWindow:
     def __init__(self, db):
         self.window = uic.loadUi("mainwindow.ui")
         self.fileTree = self.window.fileTree
-        self.fileTree.itemExpanded.connect(self.fileTreeItemExpanded)
-        self.btnSaveFile = self.window.saveFile
-        self.btnSaveFile.clicked.connect(self._saveFileClick)
-        self.btnNewFile = self.window.newFile
-        self.btnNewFile.clicked.connect(self._newFileClick)
-        self.btnNewDirectory = self.window.newDirectory
-        self.btnNewDirectory.clicked.connect(self._newDirectoryClick)
+        self.fileTree.itemExpanded.connect(self._fileTreeItemExpanded)
+        self.fileTree.itemClicked.connect(self._fileTreeItemClicked)
+        self.fileContents = self.window.fileContents
+        self.window.saveFile.clicked.connect(self._saveFileClick)
+        self.window.newFile.clicked.connect(self._newFileClick)
+        self.window.newDirectory.clicked.connect(self._newDirectoryClick)
 
         self.loaded = {} # Lists loaded directories and files
         self.db = db
@@ -76,8 +84,59 @@ class MainWindow:
     def show(self):
         self.window.show()
 
+    def _currentDirItem(self):
+        ''' Returns the current selected directory. Current item if it's a directory
+        or its parent otherwise '''
+        selected = self.selectedItem()
+        if not selected:
+            return None
+
+        if selected.childCount() > 0:
+            return selected
+
+        return selected.parent()
+
+    def _currentDirPath(self):
+        ''' Returns the path to the current directory. If the selected item is not
+        a directory, returns its parent's path '''
+        cdir = self._currentDirItem()
+        if not cdir:
+            return '/'
+
+        return self._entryPath(cdir)
+
     def _newFileClick(self):
-        pass
+        ok, name = nameDialog()
+        if not ok:
+            return
+        if name == '':
+            msg = QtWidgets.QMessageBox()
+            msg.setText('File name cannot be empty.')
+            msg.exec()
+            return
+
+        currentDir = self._currentDirPath()
+        if currentDir == '/':
+            self.db.createFile(currentDir + name, '')
+            item = self.addTopEntry(name, 0, False)
+        else:
+            self.db.createFile(currentDir + '/' + name, '')
+            item = self.addSubEntry(self._currentDirItem(), name, 0, False)
+
+        # TODO check if current file was not saved
+        parent = self._currentDirItem()
+        if parent.isExpanded():
+            self._refreshDirectory(parent)
+        else:
+            parent.setExpanded(True)
+            # refresh is a side effect of expanding
+
+        for i in range(parent.childCount()):
+            if parent.child(i).text(0) == name:
+                self.fileTree.setCurrentItem(parent.child(i))
+                break
+
+        self.window.fileContents.setPlainText('')
 
     def _saveFileClick(self):
         pass
@@ -85,7 +144,13 @@ class MainWindow:
     def _newDirectoryClick(self):
         pass
 
-    def fileTreeItemExpanded(self, item):
+    def _fileTreeItemClicked(self, item, column):
+        print(item.text(0))
+
+    def _fileTreeItemExpanded(self, item):
+        self._refreshDirectory(item)
+
+    def _refreshDirectory(self, item):
         item.takeChildren()
         itemPath = self._entryPath(item)
         entries = self.db.listDirectory(itemPath)
@@ -118,19 +183,28 @@ class MainWindow:
 
         return item
 
+    def itemIsDirectory(self, item):
+        return item.childCount() > 0
+
+    def selectedItem(self):
+        return self.fileTree.currentItem()
+
     def addTopEntry(self, name, size, directory):
         item = self._createEntry(None, name, size, directory)
         self.fileTree.insertTopLevelItem(0, item)
+        return item
 
     def addSubEntry(self, parent, name, size, directory):
         item = self._createEntry(parent, name, size, directory)
         parent.addChild(item)
+        return item
 
     def addSubEntryToSelected(self, name, size, directory):
-        sel = self.fileTree.currentItem()
-        self.addSubEntry(self, name, size, directory)
+        return self.addSubEntry(self.selectedItem(), name, size, directory)
 
 def nameDialog():
+    ''' Opens a dialog requesting a name to be entered. Returns True on OK, False on cancel
+    and the name typed'''
     dialog = uic.loadUi("name_dialog.ui")
     return dialog.exec() == 1, dialog.name.text()
 
