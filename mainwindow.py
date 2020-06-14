@@ -2,6 +2,11 @@
 import sys
 from PyQt5 import QtWidgets, uic
 
+class ItemType:
+    DIRECTORY = 1
+    FILE = 2
+    PLACEHOLDER = 3
+
 class DBEntry:
     def __init__(self, path):
         self.directory = data[path]['directory']
@@ -70,7 +75,7 @@ class MainWindow:
 
         self.loaded = {} # Lists loaded directories and files
         self.db = db
-        self.rootItem = self.addTopEntry('/', '', True)
+        self.rootItem = self.addTopEntry('/', '', ItemType.DIRECTORY)
 
     def show(self):
         self.window.show()
@@ -82,7 +87,7 @@ class MainWindow:
         if not selected:
             return self.rootItem
 
-        if selected.childCount() > 0:
+        if self.itemIsDirectory(selected):
             return selected
 
         return selected.parent()
@@ -130,6 +135,12 @@ class MainWindow:
         pass
 
     def _fileTreeItemClicked(self, item, column):
+        if not self.itemIsFile(item):
+            self.fileContents.setPlainText('')
+            return
+
+        path = self._entryPath(item)
+        self.fileContents.setPlainText(self.db.getFileContents(path))
         print(item.text(0))
 
     def _fileTreeItemExpanded(self, item):
@@ -143,14 +154,14 @@ class MainWindow:
             itemPath = ''
 
         if len(entries) == 0:
-            self.addSubEntry(item, '<empty>', '', False)
+            self.addSubEntry(item, '<empty>', '', ItemType.PLACEHOLDER)
 
         for name in entries:
             e = self.db.getMetadata(itemPath + '/' + name)
             if e.directory:
-                self.addSubEntry(item, name, '', True)
+                self.addSubEntry(item, name, '', ItemType.DIRECTORY)
             else:
-                self.addSubEntry(item, name, e.size, False)
+                self.addSubEntry(item, name, e.size, ItemType.FILE)
 
     def _entryPath(self, item):
         if item == self.rootItem:
@@ -163,35 +174,38 @@ class MainWindow:
             parent = parent.parent()
         return path
 
-    def _createEntry(self, parent, name, size, directory):
+    def _createEntry(self, parent, name, size, itemType):
         ''' Creates a tree item. For directory entries, also add a "loading..." child '''
-        if directory:
-            item = QtWidgets.QTreeWidgetItem(parent, [name, ""], 1)
-            loading = QtWidgets.QTreeWidgetItem(item, ["loading...", ""], 1)
+        if itemType == ItemType.DIRECTORY:
+            item = QtWidgets.QTreeWidgetItem(parent, [name, ""], ItemType.DIRECTORY)
+            loading = QtWidgets.QTreeWidgetItem(item, ["loading...", ""], ItemType.PLACEHOLDER)
             item.addChild(loading)
         else:
-            item = QtWidgets.QTreeWidgetItem(parent, [name, str(size)], 1)
+            item = QtWidgets.QTreeWidgetItem(parent, [name, str(size)], itemType)
 
         return item
 
     def itemIsDirectory(self, item):
-        return item.childCount() > 0
+        return item.type() == ItemType.DIRECTORY
+
+    def itemIsFile(self, item):
+        return item.type() == ItemType.FILE
 
     def selectedItem(self):
         return self.fileTree.currentItem()
 
-    def addTopEntry(self, name, size, directory):
-        item = self._createEntry(None, name, size, directory)
+    def addTopEntry(self, name, size, itemType):
+        item = self._createEntry(None, name, size, itemType)
         self.fileTree.insertTopLevelItem(0, item)
         return item
 
-    def addSubEntry(self, parent, name, size, directory):
-        item = self._createEntry(parent, name, size, directory)
+    def addSubEntry(self, parent, name, size, itemType):
+        item = self._createEntry(parent, name, size, itemType)
         parent.addChild(item)
         return item
 
-    def addSubEntryToSelected(self, name, size, directory):
-        return self.addSubEntry(self.selectedItem(), name, size, directory)
+    def addSubEntryToSelected(self, name, size, itemType):
+        return self.addSubEntry(self.selectedItem(), name, size, itemType)
 
 def nameDialog():
     ''' Opens a dialog requesting a name to be entered. Returns True on OK, False on cancel
