@@ -1,50 +1,52 @@
 # This Python file uses the following encoding: utf-8
 import sys
 from PyQt5 import QtWidgets, uic
+from pyignite import Client, datatypes, GenericObjectMeta
+from collections import OrderedDict
 
 class ItemType:
     DIRECTORY = 1
     FILE = 2
     PLACEHOLDER = 3
 
-class DBEntry:
-    def __init__(self, path):
-        self.directory = data[path]['directory']
-        self.name      = path[:path.rfind('/')]
-        if self.directory:
-            self.contents = data[path]['contents']
-        else:
-            self.size = data[path]['size']
-
-# DB mock
-data = {}
-data['/'] = {'contents': ['a', 'b', 'c'], 'directory': True}
-data['/a'] = {'contents': ['c', 'd', 'f'], 'directory': True}
-data['/a/c'] = {'contents': ['e'], 'directory': True}
-data['/a/c/e'] = {'size': 42, 'directory': False}
-data['/a/d'] = {'size': 8, 'directory': False}
-data['/b'] = {'size': 1333, 'directory': False}
-data['/c'] = {'contents': [], 'directory': True}
-data['/a/f'] = {'contents': [], 'directory': True}
+class DBEntry(metaclass=GenericObjectMeta, schema=OrderedDict([
+    ('directory', datatypes.BoolObject),
+    ('name', datatypes.String),
+    ('size', datatypes.LongObject),
+    ('contents', datatypes.StringArrayObject)
+    ])):
+    pass
 
 class DB:
     def __init__(self):
-        # Connect to ignite here
-        pass
+        client = Client()
+        client.connect('10.0.3.10', 10800)
+        self.client = client
+
+        self.fileCache = client.get_or_create_cache("files")
+        self.metadataCache = client.get_or_create_cache("metadata")
+
+        # TODO replicate:
+        # from pyignite.datatypes.prop_codes import *
+        # from pyignite.datatypes.cache_config import CacheMode
+        # self.directoryCache = client.get_or_create_cache({
+        #    PROP_NAME: 'directories',
+        #    PROP_CACHE_MODE: CacheMode.REPLICATED
+        #})
+
+    def __del__(self):
+        self.client.close()
 
     def listDirectory(self, path):
-        # MOCK
         print("List %s" % (path))
-        return data[path]['contents']
+        return self.getMetadata(path).contents
 
     def getMetadata(self, path):
-        # MOCK
-        return DBEntry(path)
+        return self.metadataCache.get(path)
 
     def getFileContents(self, path):
-        # MOCK (will load from a different cache)
         print("Read %s" % (path))
-        return "Contents of %s" % (path)
+        return self.fileCache.get(path)
 
     def saveFile(self, path, contents):
         pass
@@ -52,15 +54,18 @@ class DB:
     def createFile(self, path, contents):
         self.saveFile(path, contents)
         # add to directory
-        # MOCK
         bar = path.rfind('/')
         directory = path[:bar]
         if directory == '':
             directory = '/'
         name = path[bar+1:]
-        data[directory]['contents'].append(name)
-        data[path] = {'size': 0, 'directory': False}
+        dirMeta = self.getMetadata(directory)
+        if not name in dirMeta.contents:
+            dirMeta.contents.append(name)
+            self.metadataCache.put(directory, dirMeta)
 
+        fileMeta = DBEntry(False, name, len(contents), [])
+        self.metadataCache.put(path, fileMeta)
 
 class MainWindow:
     def __init__(self, db):
