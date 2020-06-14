@@ -3,24 +3,24 @@ import sys
 from PyQt5 import QtWidgets, uic
 
 class DBEntry:
-    def __init__(self, data):
-        self.directory = data['directory']
-        self.name      = data['name']
+    def __init__(self, path):
+        self.directory = data[path]['directory']
+        self.name      = path[:path.rfind('/')]
         if self.directory:
-            self.contents = data['contents']
+            self.contents = data[path]['contents']
         else:
-            self.size = data['size']
+            self.size = data[path]['size']
 
 # DB mock
 data = {}
-data['/'] = {'name': '/', 'contents': ['a', 'b', 'c'], 'directory': True}
-data['/a'] = {'name': 'a', 'contents': ['c', 'd', 'f'], 'directory': True}
-data['/a/c'] = {'name': 'c', 'contents': ['e'], 'directory': True}
-data['/a/c/e'] = {'name': 'e', 'size': 42, 'directory': False}
-data['/a/d'] = {'name': 'd', 'size': 8, 'directory': False}
-data['/b'] = {'name': 'b', 'size': 1333, 'directory': False}
-data['/c'] = {'name': 'c', 'contents': [], 'directory': True}
-data['/a/f'] = {'name': 'f', 'contents': [], 'directory': True}
+data['/'] = {'contents': ['a', 'b', 'c'], 'directory': True}
+data['/a'] = {'contents': ['c', 'd', 'f'], 'directory': True}
+data['/a/c'] = {'contents': ['e'], 'directory': True}
+data['/a/c/e'] = {'size': 42, 'directory': False}
+data['/a/d'] = {'size': 8, 'directory': False}
+data['/b'] = {'size': 1333, 'directory': False}
+data['/c'] = {'contents': [], 'directory': True}
+data['/a/f'] = {'contents': [], 'directory': True}
 
 class DB:
     def __init__(self):
@@ -34,12 +34,12 @@ class DB:
 
     def getMetadata(self, path):
         # MOCK
-        return DBEntry(data[path])
+        return DBEntry(path)
 
     def getFileContents(self, path):
         # MOCK (will load from a different cache)
         print("Read %s" % (path))
-        return "Contents of %s" % (data[path]['name'])
+        return "Contents of %s" % (path)
 
     def saveFile(self, path, contents):
         pass
@@ -54,7 +54,7 @@ class DB:
             directory = '/'
         name = path[bar+1:]
         data[directory]['contents'].append(name)
-        data[path] = {'name': name, 'size': 0, 'directory': False}
+        data[path] = {'size': 0, 'directory': False}
 
 
 class MainWindow:
