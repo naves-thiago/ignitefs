@@ -49,7 +49,12 @@ class DB:
         return self.fileCache.get(path)
 
     def saveFile(self, path, contents):
-        pass
+        self.fileCache.put(path, contents)
+        fileMeta = self.getMetadata(path)
+        if not fileMeta:
+            fileMeta = DBEntry(False, path[path.rfind('/')+1:], 0, [])
+        fileMeta.size = len(contents)
+        self.metadataCache.put(path, fileMeta)
 
     def createFile(self, path, contents):
         self.saveFile(path, contents)
@@ -134,7 +139,11 @@ class MainWindow:
         self.window.fileContents.setPlainText('')
 
     def _saveFileClick(self):
-        pass
+        if self.itemIsFile(self.selectedItem()):
+            path = self._entryPath(self.selectedItem())
+            contents = self.fileContents.toPlainText()
+            self.db.saveFile(path, contents)
+            self.selectedItem().setText(1, str(len(contents)))
 
     def _newDirectoryClick(self):
         pass
