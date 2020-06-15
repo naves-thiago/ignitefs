@@ -17,6 +17,16 @@ class DBEntry(metaclass=GenericObjectMeta, schema=OrderedDict([
     ])):
     pass
 
+def splitNamePath(path):
+    ''' Returns the parent path and file / directory name for a path '''
+    bar = path.rfind('/')
+    directory = path[:bar]
+    if directory == '':
+        directory = '/'
+    name = path[bar+1:]
+
+    return directory, name
+
 class DB:
     def __init__(self):
         client = Client()
@@ -59,11 +69,7 @@ class DB:
     def createFile(self, path, contents):
         self.saveFile(path, contents)
         # add to directory
-        bar = path.rfind('/')
-        directory = path[:bar]
-        if directory == '':
-            directory = '/'
-        name = path[bar+1:]
+        directory, name = splitNamePath(path)
         dirMeta = self.getMetadata(directory)
         if not name in dirMeta.contents:
             dirMeta.contents.append(name)
@@ -71,6 +77,16 @@ class DB:
 
         fileMeta = DBEntry(False, name, len(contents), [])
         self.metadataCache.put(path, fileMeta)
+
+    def createDirectory(self, path):
+        parent, name = splitNamePath(path)
+        parentMeta = self.getMetadata(parent)
+        if name in parentMeta.contents:
+            return
+        newMeta = DBEntry(True, name, 0, [])
+        self.metadataCache.put(path, newMeta)
+        parentMeta.contents.append(name)
+        self.metadataCache.put(parent,  parentMeta)
 
 class MainWindow:
     def __init__(self, db):
@@ -146,7 +162,37 @@ class MainWindow:
             self.selectedItem().setText(1, str(len(contents)))
 
     def _newDirectoryClick(self):
-        pass
+        ok, name = nameDialog()
+        if not ok:
+            return
+        if name == '':
+            msg = QtWidgets.QMessageBox()
+            msg.setText('Directory name cannot be empty.')
+            msg.exec()
+            return
+
+        parentPath = self._currentDirPath()
+        if parentPath == '/':
+            newDirPath = '/' + name
+        else:
+            newDirPath = parentPath + '/' + name
+
+        self.db.createDirectory(newDirPath)
+
+        # TODO check if current file was not saved
+        parent = self._currentDirItem()
+        if parent.isExpanded():
+            self._refreshDirectory(parent)
+        else:
+            parent.setExpanded(True)
+            # refresh is a side effect of expanding
+
+        for i in range(parent.childCount()):
+            if parent.child(i).text(0) == name:
+                self.fileTree.setCurrentItem(parent.child(i))
+                break
+
+        self.window.fileContents.setPlainText('')
 
     def _fileTreeItemClicked(self, item, column):
         if not self.itemIsFile(item):
