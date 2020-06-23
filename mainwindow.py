@@ -4,6 +4,9 @@ from PyQt5 import QtWidgets, uic
 from pyignite import Client, datatypes, GenericObjectMeta
 from collections import OrderedDict
 
+# how many time to retry to update metadata in case of conflict
+WRITE_RETRYS = 3
+
 class ItemType:
     DIRECTORY = 1
     FILE = 2
@@ -66,6 +69,19 @@ class DB:
         fileMeta.size = len(contents)
         self.metadataCache.put(path, fileMeta)
 
+    def _addToParent(self, path):
+        ''' Safely add item to parent contents with retry '''
+        parent, name = splitNamePath(path)
+        for x in range(WRITE_RETRYS+1):
+            parentMeta = self.getMetadata(parent)
+            if name in parentMeta.contents:
+                return True
+            newParentMeta = DBEntry(True, parentMeta.name, 0, [s for s in parentMeta.contents])
+            newParentMeta.contents.append(name)
+            if self.metadataCache.replace_if_equals(parent, parentMeta, newParentMeta):
+                return True
+        return False
+
     def createFile(self, path, contents):
         self.saveFile(path, contents)
         # add to directory
@@ -82,11 +98,18 @@ class DB:
         parent, name = splitNamePath(path)
         parentMeta = self.getMetadata(parent)
         if name in parentMeta.contents:
+            # Already exists in the parent contents
             return
+
         newMeta = DBEntry(True, name, 0, [])
-        self.metadataCache.put(path, newMeta)
-        parentMeta.contents.append(name)
-        self.metadataCache.put(parent,  parentMeta)
+        if not self.metadataCache.put_if_absent(path, newMeta):
+            # Already exists. Add to parent
+            if not self._addToParent(path):
+                errorMessage('Unable to create directory')
+            return
+
+        if not self._addToParent(path):
+            errorMessage('Unable to create directory')
 
 class MainWindow:
     def __init__(self, db):
@@ -272,6 +295,11 @@ def nameDialog():
     and the name typed'''
     dialog = uic.loadUi("name_dialog.ui")
     return dialog.exec() == 1, dialog.name.text()
+
+def errorMessage(msg):
+    msgBox = QtWidgets.QMessageBox()
+    msgBox.setText(msg)
+    msgBox.exec()
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
