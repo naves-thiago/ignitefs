@@ -101,7 +101,7 @@ class MainWindow:
 
         self.loaded = {} # Lists loaded directories and files
         self.db = db
-        self.rootItem = self.addTopEntry('/', '', ItemType.DIRECTORY)
+        self.rootItem = self.addTopItem('/', '', ItemType.DIRECTORY)
 
     def show(self):
         self.window.show()
@@ -214,14 +214,14 @@ class MainWindow:
             itemPath = ''
 
         if len(entries) == 0:
-            self.addSubEntry(item, '<empty>', '', ItemType.PLACEHOLDER)
+            self.addSubItem(item, '<empty>', '', ItemType.PLACEHOLDER)
 
         for name in entries:
             e = self.db.getMetadata(itemPath + '/' + name)
             if e.directory:
-                self.addSubEntry(item, name, '', ItemType.DIRECTORY)
+                self.addSubItem(item, name, '', ItemType.DIRECTORY)
             else:
-                self.addSubEntry(item, name, e.size, ItemType.FILE)
+                self.addSubItem(item, name, e.size, ItemType.FILE)
 
     def _entryPath(self, item):
         if item == self.rootItem:
@@ -234,7 +234,7 @@ class MainWindow:
             parent = parent.parent()
         return path
 
-    def _createEntry(self, parent, name, size, itemType):
+    def _createItem(self, parent, name, size, itemType):
         ''' Creates a tree item. For directory entries, also add a "loading..." child '''
         if itemType == ItemType.DIRECTORY:
             item = QtWidgets.QTreeWidgetItem(parent, [name, ""], ItemType.DIRECTORY)
@@ -254,18 +254,18 @@ class MainWindow:
     def selectedItem(self):
         return self.fileTree.currentItem()
 
-    def addTopEntry(self, name, size, itemType):
-        item = self._createEntry(None, name, size, itemType)
+    def addTopItem(self, name, size, itemType):
+        item = self._createItem(None, name, size, itemType)
         self.fileTree.insertTopLevelItem(0, item)
         return item
 
-    def addSubEntry(self, parent, name, size, itemType):
-        item = self._createEntry(parent, name, size, itemType)
+    def addSubItem(self, parent, name, size, itemType):
+        item = self._createItem(parent, name, size, itemType)
         parent.addChild(item)
         return item
 
-    def addSubEntryToSelected(self, name, size, itemType):
-        return self.addSubEntry(self.selectedItem(), name, size, itemType)
+    def addSubItemToSelected(self, name, size, itemType):
+        return self.addSubItem(self.selectedItem(), name, size, itemType)
 
 def nameDialog():
     ''' Opens a dialog requesting a name to be entered. Returns True on OK, False on cancel
