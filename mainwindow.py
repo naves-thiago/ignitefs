@@ -61,13 +61,20 @@ class DB:
         print("Read %s" % (path))
         return self.fileCache.get(path)
 
-    def saveFile(self, path, contents):
-        self.fileCache.put(path, contents)
-        fileMeta = self.getMetadata(path)
-        if not fileMeta:
-            fileMeta = DBEntry(False, path[path.rfind('/')+1:], 0, [])
-        fileMeta.size = len(contents)
-        self.metadataCache.put(path, fileMeta)
+    def saveFile(self, path, oldContents, contents):
+        if not self.fileCache.replace_if_equals(path, oldContents, contents):
+            return False, 'Unable to save. Would override remote changes'
+
+        # if the metadata update fails, it was already changed remotly. No need to do anything
+        oldMetadata = self.getMetadata(path)
+        if oldMetadata and oldMetadata.size != len(oldContents):
+            return True, ''
+        fileMeta = DBEntry(False, path[path.rfind('/')+1:], len(contents), [])
+        if oldMetadata:
+            self.metadataCache.replace_if_equals(path, oldMetadata, fileMeta)
+        else:
+            self.metadataCache.put_if_absent(path, fileMeta)
+        return True, ''
 
     def _addToParent(self, path):
         ''' Safely add item to parent contents with retry '''
@@ -82,19 +89,24 @@ class DB:
                 return True
         return False
 
-    def createFile(self, path, contents):
-        self.saveFile(path, contents)
-        # add to directory
-        directory, name = splitNamePath(path)
-        dirMeta = self.getMetadata(directory)
-        if not name in dirMeta.contents:
-            dirMeta.contents.append(name)
-            self.metadataCache.put(directory, dirMeta)
+    def createFile(self, path):
+        ''' Creates an empty file '''
+        if not self.fileCache.put_if_absent(path, ''):
+            # Try to add to the parent directory, in case it's missing
+            self._addToParent(path)
+            return False, 'File already exists'
 
-        fileMeta = DBEntry(False, name, len(contents), [])
-        self.metadataCache.put(path, fileMeta)
+        # Update metadata
+        if not self.saveFile(path, '', ''):
+            return False, 'File already exists 2'
+
+        if not self._addToParent(path):
+            return False, 'Unable to create file'
+
+        return True, ''
 
     def createDirectory(self, path):
+        ''' Creates an empty directory '''
         parent, name = splitNamePath(path)
         parentMeta = self.getMetadata(parent)
         if name in parentMeta.contents:
@@ -125,6 +137,7 @@ class MainWindow:
         self.loaded = {} # Lists loaded directories and files
         self.db = db
         self.rootItem = self.addTopItem('/', '', ItemType.DIRECTORY)
+        self._remoteFileContents = '' # Expected remote contents for the current file
 
     def show(self):
         self.window.show()
@@ -158,9 +171,13 @@ class MainWindow:
 
         currentDir = self._currentDirPath()
         if currentDir == '/':
-            self.db.createFile('/' + name, '')
+            ok, error = self.db.createFile('/' + name)
         else:
-            self.db.createFile(currentDir + '/' + name, '')
+            ok, error = self.db.createFile(currentDir + '/' + name)
+
+        if not ok:
+            errorMessage(error)
+            return
 
         # TODO check if current file was not saved
         parent = self._currentDirItem()
@@ -181,7 +198,10 @@ class MainWindow:
         if self.itemIsFile(self.selectedItem()):
             path = self._entryPath(self.selectedItem())
             contents = self.fileContents.toPlainText()
-            self.db.saveFile(path, contents)
+            ok, error = self.db.saveFile(path, self._remoteFileContents, contents)
+            if not ok:
+                errorMessage(error)
+                return
             self.selectedItem().setText(1, str(len(contents)))
 
     def _newDirectoryClick(self):
@@ -223,7 +243,8 @@ class MainWindow:
             return
 
         path = self._entryPath(item)
-        self.fileContents.setPlainText(self.db.getFileContents(path))
+        self._remoteFileContents = self.db.getFileContents(path)
+        self.fileContents.setPlainText(self._remoteFileContents)
         print(item.text(0))
 
     def _fileTreeItemExpanded(self, item):
@@ -241,6 +262,11 @@ class MainWindow:
 
         for name in entries:
             e = self.db.getMetadata(itemPath + '/' + name)
+            if not e:
+                # Handle missing files
+                self.addSubItem(item, name, 0, ItemType.FILE)
+                continue
+
             if e.directory:
                 self.addSubItem(item, name, '', ItemType.DIRECTORY)
             else:
