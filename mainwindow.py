@@ -39,6 +39,9 @@ class DB:
         self.fileCache = client.get_or_create_cache("files")
         self.metadataCache = client.get_or_create_cache("metadata")
 
+        if not self.getMetadata('/'):
+            self.metadataCache.put_if_absent('/', DBEntry(True, '/', 0, []))
+
         # TODO replicate:
         # from pyignite.datatypes.prop_codes import *
         # from pyignite.datatypes.cache_config import CacheMode
@@ -52,7 +55,11 @@ class DB:
 
     def listDirectory(self, path):
         print("List %s" % (path))
-        return self.getMetadata(path).contents
+        metadata = self.getMetadata(path)
+        if metadata:
+            return metadata.contents
+        else:
+            return []
 
     def getMetadata(self, path):
         return self.metadataCache.get(path)
@@ -193,6 +200,7 @@ class MainWindow:
                 break
 
         self.window.fileContents.setPlainText('')
+        self._remoteFileContents = ''
 
     def _saveFileClick(self):
         if self.itemIsFile(self.selectedItem()):
@@ -203,6 +211,7 @@ class MainWindow:
                 errorMessage(error)
                 return
             self.selectedItem().setText(1, str(len(contents)))
+            self._remoteFileContents = contents
 
     def _newDirectoryClick(self):
         ok, name = nameDialog()
